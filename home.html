@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kenny AI</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+
+  <style>
+    .profile-bubble {
+      position: fixed;
+      left: 15px;
+      bottom: 15px;
+      display:flex;
+      gap:6px;
+      align-items:center;
+      background: rgba(255,255,255,0.05);
+      padding:6px 10px;
+      border-radius:999px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      transition: transform .18s ease, opacity .18s ease;
+      z-index: 9999;
+    }
+    .profile-bubble img.avatar {
+      width:34px; 
+      height:34px; 
+      border-radius:50%; 
+      object-fit:cover; 
+      display:block; 
+      border:2px solid rgba(255,255,255,0.08);
+    }
+    .profile-bubble .username {
+      color:#e2e8f0; 
+      font-weight:500; 
+      font-size:13px; 
+      white-space:nowrap;
+      margin-right: 4px;
+    }
+    .profile-bubble .profile-actions {
+      display:flex;
+      gap:4px;
+    }
+    .profile-bubble .small-btn {
+      border:none; 
+      background:rgba(255,255,255,0.08); 
+      color:#cbd5e1; 
+      padding:4px 6px; 
+      border-radius:6px; 
+      cursor:pointer; 
+      font-size:12px;
+    }
+    .profile-bubble .small-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .profile-bubble.hidden { 
+      opacity:0; 
+      transform: translateY(10px) scale(0.97); 
+      pointer-events:none; 
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <button id="newChatBtn">+ New Chat</button>
+  </div>
+
+  <div class="main">
+    <div id="chat-container"></div>
+
+    <div id="calculator-container" class="chat-message hidden">
+      <div id="calc-display">0</div>
+      <div id="calc-buttons">
+        <button class="calc-btn">(</button>
+        <button class="calc-btn">)</button>
+        <button class="calc-btn">7</button>
+        <button class="calc-btn">8</button>
+        <button class="calc-btn">9</button>
+        <button class="calc-btn">/</button>
+        <button class="calc-btn">4</button>
+        <button class="calc-btn">5</button>
+        <button class="calc-btn">6</button>
+        <button class="calc-btn">*</button>
+        <button class="calc-btn">1</button>
+        <button class="calc-btn">2</button>
+        <button class="calc-btn">3</button>
+        <button class="calc-btn">-</button>
+        <button class="calc-btn">0</button>
+        <button class="calc-btn">.</button>
+        <button class="calc-btn" id="clear">C</button>
+        <button class="calc-btn">+</button>
+        <button class="calc-btn" id="equals">=</button>
+        <button class="calc-btn exit-calc">Exit</button>
+      </div>
+    </div>
+
+    <div id="input-container">
+      <input type="text" id="user-input" placeholder="Type a message..." autocomplete="off"/>
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <div id="profileBubble" class="profile-bubble hidden" aria-hidden="true">
+    <img id="profileAvatar" class="avatar" src="" alt="avatar" />
+    <div class="username" id="profileName">User</div>
+    <div class="profile-actions">
+      <button id="openAccountBtn" class="small-btn">⚙</button>
+      <button id="logoutBtn" class="small-btn">⎋</button>
+    </div>
+  </div>
+
+  <script src="chatbot.js"></script>
+
+  <script>
+    function getSavedUser() {
+      try {
+        const raw = localStorage.getItem('kenny_user');
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function showProfile(user) {
+      const bubble = document.getElementById('profileBubble');
+      const avatar = document.getElementById('profileAvatar');
+      const name = document.getElementById('profileName');
+      if (!user) {
+        bubble.classList.add('hidden');
+        return;
+      }
+      avatar.src = user.avatar || '';
+      name.textContent = user.username || 'User';
+      bubble.classList.remove('hidden');
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('kenny_user');
+      showProfile(null);
+    });
+
+    document.getElementById('openAccountBtn').addEventListener('click', () => {
+      const user = getSavedUser();
+      if (!user) return;
+    });
+
+    (function initProfile() {
+      const user = getSavedUser();
+      showProfile(user);
+    })();
+  </script>
+  <script>
+document.getElementById("send-btn").addEventListener("click", sendMessage);
+document.getElementById("user-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
+  const input = document.getElementById("user-input");
+  const message = input.value.trim();
+  if (!message) return;
+
+  const chatContainer = document.getElementById("chat-container");
+  chatContainer.innerHTML += `<div class="message user">${message}</div>`;
+  input.value = "";
+
+  const response = await fetch("http://127.0.0.1:5000/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
+
+  const data = await response.json();
+  chatContainer.innerHTML += `<div class="message bot">${data.reply}</div>`;
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+</script>
+</body>
+</html>
